@@ -63,7 +63,8 @@ export function uploadImage(event) {
         // do something with the data result
         const dataURL = e.target.result;
         const image = createElement('img', null, { src: dataURL });
-        document.body.appendChild(image);
+        //document.body.appendChild(image);
+        document.getElementById('large-feed').appendChild(image);
     };
 
     // this returns a base64 image
@@ -82,4 +83,46 @@ export function checkStore(key) {
     else
         return null
 
+}
+
+export function header(text) {
+    const header = createElement_('h1');
+    header.innerText = text;
+    header.style.fontSize = '50px';
+    header.style.color = 'white';
+    return header;
+}
+
+export function appendChilds(parent, childs) {
+    for (var child of childs) {
+        parent.appendChild(child);
+    }
+}
+
+export function createLabel(text) {
+    const label = createElement_('h2');
+    
+    label.innerText = text;
+    label.style.color = 'white';
+    label.style.paddingRight = '20px';
+    label.style.display = 'inline-block';
+
+    return label;
+}
+
+export function createInputBox(type, placeholder) {
+    const box = createElement_('input');
+
+    box.type = type;
+    box.required = true;
+    box.placeholder = placeholder;
+    box.style.padding = '10px 10px 10px 10px';
+    box.style.outline = 'none';
+    box.className = 'textBox';
+
+    return box;
+}
+
+export function createElement_(element) {
+    return document.createElement(element);
 }
