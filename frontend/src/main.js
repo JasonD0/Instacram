@@ -1,5 +1,5 @@
 // importing named exports we use brackets
-import { createPostTile, uploadImage, header, appendChilds, createLabel, createElement_, createInputBox, checkStore } from './helpers.js';
+import { createPostTile, uploadImage, header, createElement, appendChilds, createLabel, createInputBox, checkStore } from './helpers.js';
 
 // when importing 'default' exports, use below syntax
 import API from './api.js';
@@ -65,7 +65,7 @@ const emailLabel = createLabel('Email:');
 
 const submitL = createButton('Login', 'submit');
 submitL.addEventListener('click', () => {
-    const tb = document.getElementsByClassName('textBox');
+    const tb = document.getElementsByClassName('input-text-boxes');
     api.makeAPIRequest('auth/login', optionsPost({ 'Content-Type': 'application/json' }, 'POST', {username: tb[0].value, password: tb[1].value}))
         .then(data => {
             if (data.token) {
@@ -81,10 +81,9 @@ submitL.addEventListener('click', () => {
     
 const submitR = createButton('Signup', 'submit');
 submitR.addEventListener('click', () => {
-    const tb = Array.from(document.getElementsByClassName('textBox')).slice(2, 6);
+    const tb = Array.from(document.getElementsByClassName('input-text-boxes')).slice(2, 6);
     api.makeAPIRequest('auth/signup', optionsPost({ 'Content-Type': 'application/json' }, 'POST', {username:  tb[2].value, password: tb[3].value, email: tb[1].value, name: tb[0].value})) 
     .then(data => {
-        console.log(data);
         if (data.token) {
             window.localStorage.setItem('user', data.token);
                 document.getElementById('register').innerText = 'UPLOAD';
@@ -117,20 +116,16 @@ function loadFeed() {
             let posts = data.posts;
             posts.reduce((parent, post) => {
                 parent.appendChild(createPostTile(post));
+                parent.appendChild(createElement('br'));
                 return parent;
             }, feed)
         });
 }
 
 function createButton(text, id) {
-    const b = createElement_('button');
+    const b = createElement('button');
+    b.className = 'submit-buttons';
     b.innerText = text;
-    b.style.fontSize = '20px';
-    b.style.fontWeight = 'bold';
-    b.style.outline = 'none';
-    b.style.padding = '10px 0px 10px 10px';
-    b.style.paddingLeft = '40px';
-    b.style.paddingRight = '40px';
     b.id = id;
     return b;
 }
@@ -141,26 +136,23 @@ function formChange(formA, formB) {
     
     x.style.display = 'none';
     y.style.display = 'inline-block';
-    for (var box of document.getElementsByClassName('textBox')) {
+    for (var box of document.getElementsByClassName('input-text-boxes')) {
         box.value = '';
     }
 }
 
 function createFormDiv(id, width) {
-    const div = createElement_('div');
-    div.style.background = '#2D2D2D';
+    const div = createElement('div');
+    div.className = 'main-content-box';
     div.id = id;
-    div.style.padding = '50px';
     div.style.width = width;
-    div.style.borderRadius = '20px';
-    div.style.display = 'inline-block';
     return div;
 }
 
-const newLine = createElement_('br');
-const a = createElement_('br');
-const b = createElement_('br');
-const c = createElement_('br');
+const newLine = createElement('br');
+const a = createElement('br');
+const b = createElement('br');
+const c = createElement('br');
 appendChilds(loginForm, [header('LOGIN'), userLabel1, username.cloneNode(), passLabel1, password.cloneNode(), a.cloneNode(), b.cloneNode(), c.cloneNode(), submitL])
 appendChilds(registerForm, [header('SIGNUP'), nameLabel, name, newLine, emailLabel, email, userLabel, username, passLabel, password, a, b, c, submitR])
 

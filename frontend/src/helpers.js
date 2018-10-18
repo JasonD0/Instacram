@@ -37,16 +37,43 @@ export function createElement(tag, data, options = {}) {
 export function createPostTile(post) {
     const section = createElement('section', null, { class: 'post' });
 
-    section.appendChild(createElement('h2', post.meta.author, { class: 'post-title' }));
-    
     section.appendChild(createElement('img', null, 
         { src: 'data:image/png;base64,' + post.src, alt: post.meta.description_text, class: 'post-image' }));
 
-    const d = createElement_('h5');
-    d.innerText = '\"' + post.meta.description_text + '\"';
+    const name = createElement('a');
+    name.innerText = post.meta.author + "\n";
+    name.style.display = 'inline-block';
+    name.style.color = 'white';
+    name.style.paddingLeft = '15px';
+    
+    const description = createElement('p');
+    description.innerText = '\"' + post.meta.description_text + '\"';
+    description.style.textAlign = 'center';
+    
+    const numComments = (post.meta.comments) ? post.meta.comments.length : 0;
+    const numLikes = (post.meta.likes) ? post.meta.likes.length : 0;
+    
+    const comments = createElement('a');
+    comments.innerText = 'View all ' + numComments + ' comments\n\u00A0\n'; 
+    comments.id = 'comments';
+    comments.style.paddingLeft = '15px';
+    comments.style.fontSize = '15px';
+    comments.style.color = 'aquamarine';
 
-    section.appendChild(d);
+    const likes = createElement('a');
+    likes.innerText = '\n\u00A0\u00A0\u00A0 ❤ ' + numLikes + ' likes \u00A0·\u00A0 View likes'; 
+    likes.id = 'comments';
+    likes.style.paddingLeft = '15px';
+    likes.style.fontSize = '15px';
+    likes.style.color = 'aquamarine';
 
+    const date = createElement('i');
+    let time = new Date(parseInt(post.meta.published));
+    date.style.fontSize = '15px';
+    date.innerText = time.toUTCString();
+    date.style.paddingLeft = '15px';
+    date.style.color = 'rgba(255, 255, 255, 0.5)';
+    appendChilds(section, [name, likes, description, comments, date]);
 
     return section;
 }
@@ -69,7 +96,6 @@ export function uploadImage(event) {
         // do something with the data result
         const dataURL = e.target.result;
         const image = createElement('img', null, { src: dataURL });
-        //document.body.appendChild(image);
         document.getElementById('large-feed').appendChild(image);
     };
 
@@ -92,7 +118,7 @@ export function checkStore(key) {
 }
 
 export function header(text) {
-    const header = createElement_('h1');
+    const header = createElement('h1');
     header.innerText = text;
     header.style.fontSize = '50px';
     header.style.color = 'white';
@@ -106,29 +132,19 @@ export function appendChilds(parent, childs) {
 }
 
 export function createLabel(text) {
-    const label = createElement_('h2');
-    
+    const label = createElement('h2');
     label.innerText = text;
     label.style.color = 'white';
     label.style.paddingRight = '20px';
     label.style.display = 'inline-block';
-
     return label;
 }
 
 export function createInputBox(type, placeholder) {
-    const box = createElement_('input');
-
+    const box = createElement('input');
+    box.className = 'input-text-boxes';
     box.type = type;
     box.required = true;
     box.placeholder = placeholder;
-    box.style.padding = '10px 10px 10px 10px';
-    box.style.outline = 'none';
-    box.className = 'textBox';
-
     return box;
-}
-
-export function createElement_(element) {
-    return document.createElement(element);
 }
