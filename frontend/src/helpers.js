@@ -38,9 +38,15 @@ export function createPostTile(post) {
     const section = createElement('section', null, { class: 'post' });
 
     section.appendChild(createElement('h2', post.meta.author, { class: 'post-title' }));
-
+    
     section.appendChild(createElement('img', null, 
-        { src: '/images/'+post.src, alt: post.meta.description_text, class: 'post-image' }));
+        { src: 'data:image/png;base64,' + post.src, alt: post.meta.description_text, class: 'post-image' }));
+
+    const d = createElement_('h5');
+    d.innerText = '\"' + post.meta.description_text + '\"';
+
+    section.appendChild(d);
+
 
     return section;
 }
