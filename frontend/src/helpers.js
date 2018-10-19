@@ -34,7 +34,7 @@ export function createElement(tag, data, options = {}) {
  * @param   {object}        post 
  * @returns {HTMLElement}
  */
-export function createPostTile(post) {
+export function createPostTile(post, index) {
     const section = createElement('section', null, { class: 'post' });
 
     section.appendChild(createElement('img', null, 
@@ -42,40 +42,46 @@ export function createPostTile(post) {
 
     const name = createElement('a');
     name.innerText = post.meta.author + "\n";
-    name.style.display = 'inline-block';
-    name.style.color = 'white';
-    name.style.paddingLeft = '15px';
+    name.className = 'name';
     
     const description = createElement('p');
     description.innerText = '\"' + post.meta.description_text + '\"';
     description.style.textAlign = 'center';
     
-    const numComments = (post.meta.comments) ? post.meta.comments.length : 0;
+    const numComments = (post.comments) ? post.comments.length : 0;
     const numLikes = (post.meta.likes) ? post.meta.likes.length : 0;
+    window.localStorage.setItem(post.id, numLikes);
     
     const comments = createElement('a');
     comments.innerText = 'View all ' + numComments + ' comments\n\u00A0\n'; 
-    comments.id = 'comments';
-    comments.style.paddingLeft = '15px';
-    comments.style.fontSize = '15px';
-    comments.style.color = 'aquamarine';
+    comments.className = 'comments';
 
     const likes = createElement('a');
-    likes.innerText = '\n\u00A0\u00A0\u00A0 ❤ ' + numLikes + ' likes \u00A0·\u00A0 View likes'; 
-    likes.id = 'comments';
-    likes.style.paddingLeft = '15px';
-    likes.style.fontSize = '15px';
-    likes.style.color = 'aquamarine';
+    likes.innerText = '\n\u00A0\u00A0\u00A0 ❤ ' + numLikes + ' likes ·'; 
+    likes.className = 'likes';
+    
+    const viewLikes = createElement('a');
+    viewLikes.innerText = 'View likes';
+    viewLikes.className = 'viewLikes';
+    window.localStorage.setItem(index, post.id);
 
     const date = createElement('i');
-    let time = new Date(parseInt(post.meta.published));
-    date.style.fontSize = '15px';
-    date.innerText = time.toUTCString();
-    date.style.paddingLeft = '15px';
-    date.style.color = 'rgba(255, 255, 255, 0.5)';
-    appendChilds(section, [name, likes, description, comments, date]);
+    date.className = 'date';
+    date.innerText = convertToTime(post.meta.published);
+
+    const postId = createElement('p');
+    postId.className = 'postId';
+    postId.innerText = post.id;
+    postId.style.display = 'none';
+
+    appendChilds(section, [name, likes, viewLikes, description, comments, date, postId]);
 
     return section;
+}
+
+export function convertToTime(n) {
+    let time = new Date(parseFloat(n));
+    return time.toUTCString();
 }
 
 // Given an input element of type=file, grab the data uploaded for use
