@@ -79,6 +79,10 @@ export function createPostTile(post, index) {
     return section;
 }
 
+/**
+ * Converts UNIX time stamp to readable time
+ * @param {*} n 
+ */
 export function convertToTime(n) {
     let time = new Date(parseFloat(n));
     return time.toUTCString();
@@ -131,12 +135,21 @@ export function header(text) {
     return header;
 }
 
+/**
+ * Appends list of elements to a parent
+ * @param {*} parent 
+ * @param {*} childs 
+ */
 export function appendChilds(parent, childs) {
     for (var child of childs) {
         parent.appendChild(child);
     }
 }
 
+/**
+ * Creates label with text
+ * @param {*} text 
+ */
 export function createLabel(text) {
     const label = createElement('h2');
     label.innerText = text;
@@ -146,6 +159,11 @@ export function createLabel(text) {
     return label;
 }
 
+/**
+ * Creates textBox for user input
+ * @param {*} type 
+ * @param {*} placeholder 
+ */
 export function createInputBox(type, placeholder) {
     const box = createElement('input');
     box.className = 'input-text-boxes';
