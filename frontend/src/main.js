@@ -1,5 +1,5 @@
 // importing named exports we use brackets
-import { convertToTime, createPostTile, uploadImage, header, createElement, appendChilds, createLabel, createInputBox, checkStore } from './helpers.js';
+import { convertToTime, options, optionsNoBody, removeChilds, createPostTile, uploadImage, header, createElement, appendChilds, createLabel, createInputBox, checkStore } from './helpers.js';
 
 // when importing 'default' exports, use below syntax
 import API from './api.js';
@@ -14,13 +14,16 @@ login.addEventListener('click', ()=>{
         formChange('registerForm', 'loginForm');
     } else {
         // LOGOUT
-        window.localStorage.clear();
-        formChange('feed', 'loginForm');
-        formChange('profileForm', 'loginForm');
+        formChange(checkStore('currentPage'), 'loginForm');
+        formChange('userPosts', 'loginForm');
         register.innerText = 'REGISTER';
         login.innerText = 'LOGIN';
         removeChilds(feed);
+        removeChilds(profileForm);
+        removeChilds(userPosts);
+        window.localStorage.clear();
     }   
+    window.localStorage.setItem('currentPage', 'loginForm');
 });
 
 // register 'button' functionality
@@ -30,28 +33,23 @@ register.addEventListener('click', ()=>{
     // change page to register
     if (register.innerText === 'REGISTER') {
         formChange('loginForm', 'registerForm');
-    // change page to profile
+        window.localStorage.setItem('currentPage', 'registerForm');
+        // change page to profile
     } else if (register.innerText === 'PROFILE') {
         register.innerText = 'FEED';
-        formChange('feed', 'profileForm');
+        if (checkStore('logged') == 1) initProfile();
+        formChange(checkStore('currentPage'), 'profileForm');
+        formChange(checkStore('currentPage'), 'userPosts');
+        window.localStorage.setItem('currentPage', 'profileForm');
     // change page to feed
     } else {
         register.innerText = 'PROFILE';
-        formChange('profileForm', 'feed');
+        formChange(checkStore('currentPage'), 'feed');
+        formChange('userPosts', 'feed');
+        window.localStorage.setItem('currentPage', 'feed');
     }
 });
 
-/**
- * Remove all child elements of a parent
- * @param {*} element 
- */
-function removeChilds(element) {
-    let child = element.firstChild;
-    while (child) {
-        element.removeChild(child);
-        child = element.firstChild;
-    }
-}
 
 const body = document.getElementById('large-feed');
 body.style.textAlign = 'center';
@@ -64,18 +62,21 @@ const feed = createFormDiv('feed', '700px');
 feed.style.display = 'none';
 const profileForm = createFormDiv('profileForm', '400px');
 profileForm.style.display = 'none';
+const userPosts = createFormDiv('userPosts', '700px');
+userPosts.style.display = 'none';
 
 /**
  * Changes page to home page
  * @param {*} data 
  */
 function homePage(data) {
+    window.localStorage.setItem('logged', 1);
     if (data.token) {
+        formChange(checkStore('currentPage'), 'feed');
+        window.localStorage.setItem('currentPage', 'feed');
         window.localStorage.setItem('user', data.token);
         register.innerText = 'PROFILE';
         login.innerText = 'LOGOUT';
-        formChange('loginForm', 'feed');
-        formChange('registerForm', 'feed');
         const userToken = data.token;
         api.makeAPIRequest('user/', optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
             .then(data => {
@@ -90,8 +91,15 @@ const submitL = createButton('Login', 'submit');
 submitL.addEventListener('click', () => {
     const tb = document.getElementsByClassName('input-text-boxes');
     api.makeAPIRequest('auth/login', options({ 'Content-Type': 'application/json' }, 'POST', {username: tb[0].value, password: tb[1].value}))
-        .then(data => homePage(data))
-        .catch(err => console.log(err));
+        .then(data => {
+            if (data.message) {
+                error.innerText = data.message;
+                error.style.display = 'block';
+            } else {
+                homePage(data);
+                error.style.display = 'none';
+            }
+        });
     });
 
 // signup button
@@ -99,26 +107,17 @@ const submitR = createButton('Signup', 'submit');
 submitR.addEventListener('click', () => {
     const tb = Array.from(document.getElementsByClassName('input-text-boxes')).slice(2, 6);
     api.makeAPIRequest('auth/signup', options({ 'Content-Type': 'application/json' }, 'POST', {username:  tb[2].value, password: tb[3].value, email: tb[1].value, name: tb[0].value})) 
-        .then(data => homePage(data))
-        .catch(err => console.log(err));
+        .then(data => {
+            if (data.message) {
+                error1.innerText = data.message;
+                error1.style.display = 'block';
+            } else {
+                homePage(data);
+                error1.style.display = 'none';
+            }
+        });
     });
 
-// create options for api requests
-function options(headers, method, body) {
-    return {
-        headers: headers,
-        method: method,
-        body: JSON.stringify(body)
-    }    
-}
-
-// create options for api requests without body
-function optionsNoBody(headers, method) {
-    return {
-        headers: headers,
-        method: method
-    }
-}
 
 // creates pop-up modal 
 function createModal(type) {
@@ -145,139 +144,103 @@ function createModal(type) {
  * Adds posts to user feed
  * @param posts 
  */
-function appendPosts(posts) {
-    var i = 0;
+function appendPosts(parentElement, posts) {
     posts.reduce((parent, post) => {
-        parent.appendChild(createPostTile(post, i));
+        parent.appendChild(createPostTile(post, api));
         parent.appendChild(createElement('br'));
-        i++;
         return parent;
-    }, feed);
+    }, parentElement);
 }
 
-/**
- * Adds like functionality to all like 'buttons'
- */
-function addLike(userToken) {
-    const feedP = document.getElementsByClassName('post');
-    Array.from(feedP).map((post) => {
-        let likeAction = post.getElementsByClassName('likes')[0];
-        const postId = parseInt(post.getElementsByClassName('postId')[0].innerText);
-        // user clicked like
-        likeAction.addEventListener('click', () => {
-            api.makeAPIRequest('post/like?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'PUT'))
-            .then(() => {
-                updateLikes(likeAction, postId, userToken);         
+function addLabelAndText(parent, labelText, text, id) {
+    const label = createLabel(labelText, 'p');
+    label.style.fontSize = '20px';
+    label.style.fontWeight = 'bold';
+    const text_ = createElement('i');
+    text_.id = id;
+    text_.style.color = 'white';
+    text_.innerText = text;
+    if (labelText === 'Following: ') appendChilds(parent, [label, createElement('br'), text_, createElement('br')]);
+    else appendChilds(parent, [label, text_, createElement('br')]);
+}
+
+function initProfile() {
+    window.localStorage.setItem('logged', 2);
+    const userToken = checkStore('user');
+    const id = checkStore('id');
+    api.makeAPIRequest('user/?id='+id, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))    
+        .then(info => {
+                const profile = document.getElementById('profileForm');
+                const header = createElement('h1');
+                header.style.color = 'white';
+                header.style.textAlign = 'center';
+                header.innerText = 'PROFILE';
+                profile.appendChild(header);
+                addLabelAndText(profile, 'Username: ', info.username);
+                addLabelAndText(profile, 'Name: ', info.name);
+                addLabelAndText(profile, 'Email: ', info.email);
+                addLabelAndText(profile, 'Followers: ', info.followed_num);
+                addLabelAndText(profile, 'Following: ', '', 'following');
+                const followingInfo = info.following;
+                followingInfo.map(user => {
+                    api.makeAPIRequest('user/?id='+user, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+                    .then(userInfo => {
+                        const following = document.getElementById('following');
+                        if (following) following.innerText += userInfo.name + ',\u00A0';
+                    });
+                });
+                const userPostsLabel = createLabel('YOUR POSTS', 'h1');
+                userPosts.appendChild(userPostsLabel);
+                addUserPosts(profile, info.posts, userToken);
+            });
+    }
+
+function addUploadImage(profileForm) {
+    const uploadLabel = createLabel('Upload Post: ', 'p');
+    uploadLabel.style.fontSize = '20px';
+    uploadLabel.style.fontWeight = 'bold';
+    const description = createElement('textarea', null, {id: 'description'});
+    description.required = true;
+    description.placeholder = 'Enter image description (required)';
+    const uploader = createElement('label', null, {id: 'upload'});
+    uploader.innerText = 'Upload Image';
+    const imageInput = createElement('input');
+    imageInput.type = 'file';
+    imageInput.addEventListener('change', () => {
+        uploadImage(event, api);
+    });
+    uploader.appendChild(imageInput);
+    appendChilds(profileForm, [createElement('br'), createElement('br'), uploadLabel, description, uploader]);
+}
+
+function addUserPosts(profile, posts, userToken) {
+    const up = document.getElementById('userPosts');
+    var s = [];
+    var totalLikes = 0;
+    posts.map(post => {
+        api.makeAPIRequest('post/?id='+post, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+            .then(postInfo => {
+                totalLikes += postInfo.meta.likes.length;
+                s.unshift(postInfo);
+                if (s.length == posts.length) {
+                    appendPosts(up, s);
+                    addLabelAndText(profile, 'Total Likes: ', totalLikes);               
+                    addUploadImage(profileForm);
+                }
             });
         });
-    });
 }
-
-/**
- * Updates like count for a post
- * @param {*} likeAction 
- * @param {*} postId 
- * @param {*} userToken 
- */
-function updateLikes(likeAction, postId, userToken) {
-    api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-    .then(data => {
-        let x = parseInt(likeAction.innerText.replace(/\D+/g, ''));
-        // user unliked
-        if (data.meta.likes.length <= parseInt(checkStore(postId))) {
-            window.localStorage.setItem(postId, x-1);
-            api.makeAPIRequest('post/unlike?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'PUT'));                                
-            if (x > 0) likeAction.innerText = likeAction.innerText.replace(x, `${x-1}`);
-        // user liked
-        } else {
-            window.localStorage.setItem(postId, x+1);
-            likeAction.innerText = likeAction.innerText.replace(x, `${x+1}`);
-        }                  
-    });
-}
-
-/**
- * Add viewing users that liked the post functionality
- * @param {*} userToken 
- */
-function addViewLikes(userToken) {
-    const viewLikes = document.getElementsByClassName('viewLikes');
-    for (let j = 0; j < viewLikes.length; j++) {
-        const pId = checkStore(j);
-        viewLikes[j].addEventListener('click', () => {
-            document.getElementsByClassName('modal')[1].style.display = 'block';
-            removeChilds(document.getElementsByClassName('modal-content')[1]);
-            api.makeAPIRequest('post/?id='+pId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-                .then(data => addLikeModalContent(data, userToken));
-        });
-    }
-}
-
-/**
- * Add users that liked the post to pop-up modal
- * @param {*} data 
- * @param {*} userToken 
- */
-function addLikeModalContent(data, userToken) {
-    const userLikes = data.meta.likes; 
-    userLikes.reduce((cs, us) => {
-        const u = createElement('a', null, {class: 'user'});
-        u.style.fontSize = '15px';
-        api.makeAPIRequest('user/?id='+us, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-            .then(userInfo => {
-                u.innerText = userInfo.username;   
-            });
-        appendChilds(cs, [u, createElement('br'), createElement('br')]);
-        return document.getElementsByClassName('modal-content')[1];
-    }, document.getElementsByClassName('modal-content')[1]);
-}
-
-/**
- * Adds viewing comments for the post functionality
- * @param {*} userToken 
- */
-function addViewComments(userToken) {
-    const comments = Array.from(document.getElementsByClassName('comments'));
-    for (let j = 0; j < comments.length; j++) {
-        const pId = checkStore(j);
-        comments[j].addEventListener('click', () => {
-            document.getElementsByClassName('modal')[0].style.display = 'block';
-            removeChilds(document.getElementsByClassName('modal-content')[0]);
-            api.makeAPIRequest('post/?id='+pId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-                .then(data => addCommentModalContents(data));
-        });
-    }
-}
-
-/**
- * Adds comments of the post to the pop-up modal
- * @param {*} data 
- */
-function addCommentModalContents(data) {
-    const userComments = data.comments;
-    userComments.reduce((cs, us) => {
-        const c = createElement('i', null, {class: 'comment'});
-        c.innerText = us.comment;
-        const u = createElement('a', null, {class: 'user'});
-        u.innerText = us.author;
-        const date = createElement('i', null, {class: 'date'});
-        date.innerText = convertToTime(us.published);
-        date.style.fontSize = '10px';
-        appendChilds(cs, [u, createElement('br'), createElement('br'), c, createElement('br'), date, createElement('br')]);
-        return document.getElementsByClassName('modal-content')[0];
-    }, document.getElementsByClassName('modal-content')[0]);
-}
-
+    
 /**
  * Loads user feed
  */
 function loadFeed() {
     const userToken = checkStore('user');
     api.makeAPIRequest('user/feed', optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-        .then(data => appendPosts(data.posts))
-        .then(() => addLike(userToken))
-        .then(() => addViewLikes(userToken))
-        .then(() => addViewComments(userToken));
+        .then(data => {
+            appendPosts(feed, data.posts);
+        })
+        .then(() => initProfile())
 }
 
 function createButton(text, id) {
@@ -317,44 +280,36 @@ function createFormDiv(id, width) {
     return div;
 }
 
-function initProfile() {
-    const userToken = checkStore('user');
-    const pId = checkStore('id');
-    api.makeAPIRequest('post/?id='+pId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))    
-        .then(info => {
-            const username = info.username;
-            const name = info.name;
-            const email = info.email;
-        });
-}
-
 // create pages
 const username = createInputBox('text', 'Enter username');
 const password = createInputBox('password', 'Enter password');
 const name = createInputBox('text', 'Enter name');
 const email = createInputBox('text', 'Enter email');
-const userLabel = createLabel('Username:');
-const userLabel1 = createLabel('Username:');
-const passLabel = createLabel('Password:');
-const passLabel1 = createLabel('Password:');
-const nameLabel = createLabel('Name:');
-const emailLabel = createLabel('Email:');
-appendChilds(loginForm, [header('LOGIN'), userLabel1, username.cloneNode(), passLabel1, password.cloneNode(), createElement('br'), createElement('br'), createElement('br'), submitL]);
-appendChilds(registerForm, [header('SIGNUP'), nameLabel, name, createElement('br'), emailLabel, email, userLabel, username, passLabel, password, createElement('br'), createElement('br'), createElement('br'), submitR]);
-appendChilds(body, [createModal('COMMENTS'), createModal('LIKED BY'), feed, loginForm, registerForm, profileForm]);
+const userLabel = createLabel('Username:', 'h2');
+const userLabel1 = createLabel('Username:', 'h2');
+const passLabel = createLabel('Password:', 'h2');
+const passLabel1 = createLabel('Password:', 'h2');
+const nameLabel = createLabel('Name:', 'h2');
+const emailLabel = createLabel('Email:', 'h2');
+const error = createElement('i', null, {id: 'error'});
+const error1 = createElement('i', null, {id: 'error'});
+appendChilds(loginForm, [header('LOGIN'), error, createElement('br'), userLabel1, username.cloneNode(), passLabel1, password.cloneNode(), createElement('br'), createElement('br'), createElement('br'), submitL]);
+appendChilds(registerForm, [header('SIGNUP'), error1, createElement('br'), nameLabel, name, createElement('br'), emailLabel, email, userLabel, username, passLabel, password, createElement('br'), createElement('br'), createElement('br'), submitR]);
+appendChilds(body, [createModal('COMMENTS'), createModal('LIKED BY'), feed, loginForm, registerForm, profileForm, userPosts]);
 
 // reload feed page when user refreshes
 if (checkStore('user')) {
     login.innerText = 'LOGOUT';
-    register.innerText = 'PROFILE';
-    formChange('registerForm', 'feed');
-    formChange('profileForm', 'feed');
-    formChange('loginForm', 'feed');
+    if (checkStore('currentPage') === 'profileForm') {
+        register.innerText = 'FEED';
+        formChange('loginForm', 'userPosts');
+    } else {
+        register.innerText = 'PROFILE';
+    }
+    formChange('loginForm', checkStore('currentPage'));
+    window.localStorage.setItem('logged', 1);
     loadFeed();
+} else {
+    window.localStorage.setItem('currentPage', 'loginForm');
 }
 
-/*
-// Potential example to upload an image
-/*const input = document.querySelector('input[type="file"]');
-
-input.addEventListener('change', uploadImage);*/

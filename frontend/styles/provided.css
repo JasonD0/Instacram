@@ -24,10 +24,12 @@ html, body {
 
 footer {
     border-top: 1px solid rgba(0,0,0,.0975);
-    padding: 10px;
     background-color:white;
-    min-height: 60px;
-    text-align: right;
+    width: 100%;
+    text-align: center;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 
 .banner > *, footer > * {
@@ -188,7 +190,7 @@ a:hover {
 
 .comment {
     text-align: left;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
     font-size: 12px;
     float: left;
     padding: 3px 0px 0px 10px;
@@ -198,4 +200,33 @@ a:hover {
     padding: 10px 0px 0px 0px;
     color: white;
     float: left;
+}
+
+#profileForm {
+    text-align: left;
+    float: left;
+    overflow-wrap: break-word;
+}
+
+#error {
+    font-size: 15px;
+    color: aquamarine;
+    text-align: center;
+    display: none;
+}
+
+#upload {
+    padding: 10px;
+    background: white;
+    display: inline-block;
+}
+
+input[type='file'] {
+    display: none;
+}
+
+textarea {
+    resize: none;
+    width: 390px;
+    height: 100px;
 }

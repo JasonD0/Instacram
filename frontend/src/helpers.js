@@ -34,9 +34,10 @@ export function createElement(tag, data, options = {}) {
  * @param   {object}        post 
  * @returns {HTMLElement}
  */
-export function createPostTile(post, index) {
+export function createPostTile(post, api) {
     const section = createElement('section', null, { class: 'post' });
-
+    const postId = post.id;
+    const userToken = checkStore('user');
     section.appendChild(createElement('img', null, 
         { src: 'data:image/png;base64,' + post.src, alt: post.meta.description_text, class: 'post-image' }));
 
@@ -52,31 +53,158 @@ export function createPostTile(post, index) {
     const numLikes = (post.meta.likes) ? post.meta.likes.length : 0;
     window.localStorage.setItem(post.id, numLikes);
     
-    const comments = createElement('a');
-    comments.innerText = 'View all ' + numComments + ' comments\n\u00A0\n'; 
-    comments.className = 'comments';
-
-    const likes = createElement('a');
-    likes.innerText = '\n\u00A0\u00A0\u00A0 ❤ ' + numLikes + ' likes ·'; 
-    likes.className = 'likes';
-    
-    const viewLikes = createElement('a');
-    viewLikes.innerText = 'View likes';
-    viewLikes.className = 'viewLikes';
-    window.localStorage.setItem(index, post.id);
+    const comments = addViewComments(numComments, postId, userToken, api);
+    const likes = addLikes(numLikes, postId, userToken, api);
+    const viewLikes = addViewLikes(postId, userToken, api);
 
     const date = createElement('i');
     date.className = 'date';
     date.innerText = convertToTime(post.meta.published);
 
-    const postId = createElement('p');
-    postId.className = 'postId';
-    postId.innerText = post.id;
-    postId.style.display = 'none';
-
-    appendChilds(section, [name, likes, viewLikes, description, comments, date, postId]);
+    appendChilds(section, [name, likes, viewLikes, description, comments, date]);
 
     return section;
+}
+
+/**
+ * Allows user to see comments of the post
+ * @param {*} numComments 
+ * @param {*} postId 
+ * @param {*} userToken 
+ * @param {*} api 
+ */
+function addViewComments(numComments, postId, userToken, api) {
+    const comments = createElement('a');
+    comments.innerText = 'View all ' + numComments + ' comments\n\u00A0\n'; 
+    comments.className = 'comments';
+    comments.addEventListener('click', () => {
+        document.getElementsByClassName('modal')[0].style.display = 'block';
+        removeChilds(document.getElementsByClassName('modal-content')[0]);
+        api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+            .then(data => addCommentModalContents(data));
+        });
+    return comments;    
+}
+
+/**
+ * Allows user to see list of users that liked the post
+ * @param {*} postId 
+ * @param {*} userToken 
+ * @param {*} api 
+ */
+function addViewLikes(postId, userToken, api) {
+    const viewLikes = createElement('a');
+    viewLikes.innerText = 'View likes';
+    viewLikes.className = 'viewLikes';
+    viewLikes.addEventListener('click', () => {
+        document.getElementsByClassName('modal')[1].style.display = 'block';
+        removeChilds(document.getElementsByClassName('modal-content')[1]);
+        api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+            .then(data => addLikeModalContent(data, userToken, api));
+    });
+    return viewLikes;
+}
+
+/**
+ * Adds like functionality to all like 'buttons'
+ * @param {*} numLikes 
+ * @param {*} postId 
+ * @param {*} userToken 
+ * @param {*} api 
+ */
+function addLikes(numLikes, postId, userToken, api) {
+    const likes = createElement('a');
+    likes.innerText = '\n\u00A0\u00A0\u00A0 ❤ ' + numLikes + ' likes ·'; 
+    likes.className = 'likes';
+    likes.addEventListener('click', () => {
+        api.makeAPIRequest('post/like?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'PUT'))
+        .then(() => {
+            updateLikes(likes, postId, userToken, api);         
+        });
+    });
+    return likes;
+}
+
+/**
+ * Adds comments of the post to the pop-up modal
+ * @param {*} data 
+ */
+function addCommentModalContents(data) {
+    const userComments = data.comments;
+    userComments.reduce((cs, us) => {
+        const c = createElement('i', null, {class: 'comment'});
+        c.innerText = us.comment;
+        const u = createElement('a', null, {class: 'user'});
+        u.innerText = us.author;
+        const date = createElement('i', null, {class: 'date'});
+        date.innerText = convertToTime(us.published);
+        date.style.fontSize = '10px';
+        appendChilds(cs, [u, createElement('br'), createElement('br'), c, createElement('br'), date, createElement('br')]);
+        return document.getElementsByClassName('modal-content')[0];
+    }, document.getElementsByClassName('modal-content')[0]);
+}
+
+/**
+ * Updates like count for a post
+ * @param {*} likeAction 
+ * @param {*} postId 
+ * @param {*} userToken 
+ */
+function updateLikes(likeButton, postId, userToken, api) {
+    api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+    .then(data => {
+        let x = parseInt(likeButton.innerText.replace(/\D+/g, ''));
+        // user unliked
+        if (data.meta.likes.length <= parseInt(checkStore(postId))) {
+            window.localStorage.setItem(postId, x-1);
+            api.makeAPIRequest('post/unlike?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'PUT'));                                
+            if (x > 0) likeButton.innerText = likeButton.innerText.replace(x, `${x-1}`);
+        // user liked
+        } else {
+            window.localStorage.setItem(postId, x+1);
+            likeButton.innerText = likeButton.innerText.replace(x, `${x+1}`);
+        }                  
+    });
+}
+
+   /**
+ * Add users that liked the post to pop-up modal
+ * @param {*} data 
+ * @param {*} userToken 
+ */
+function addLikeModalContent(data, userToken, api) {
+    const userLikes = data.meta.likes; 
+    userLikes.reduce((cs, us) => {
+        const u = createElement('a', null, {class: 'user'});
+        u.style.fontSize = '15px';
+        // convert id to name
+        api.makeAPIRequest('user/?id='+us, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+        .then(userInfo => {
+            u.innerText = userInfo.username;   
+        });
+        appendChilds(cs, [u, createElement('br'), createElement('br')]);
+        return document.getElementsByClassName('modal-content')[1];
+    }, document.getElementsByClassName('modal-content')[1]);
+}
+
+// create options for api requests without body
+export function optionsNoBody(headers, method) {
+    return {
+        headers: headers,
+        method: method
+    }
+}
+
+/**
+ * Remove all child elements of a parent
+ * @param {*} element 
+ */
+export function removeChilds(element) {
+    let child = element.firstChild;
+    while (child) {
+        element.removeChild(child);
+        child = element.firstChild;
+    }
 }
 
 /**
@@ -84,14 +212,24 @@ export function createPostTile(post, index) {
  * @param {*} n 
  */
 export function convertToTime(n) {
-    let time = new Date(parseFloat(n));
+    let time = new Date(parseFloat(n)*1000);
     return time.toUTCString();
 }
 
-// Given an input element of type=file, grab the data uploaded for use
-export function uploadImage(event) {
-    const [ file ] = event.target.files;
 
+// create options for api requests
+export function options(headers, method, body) {
+    return {
+        headers: headers,
+        method: method,
+        body: JSON.stringify(body)
+    }    
+}
+
+// Given an input element of type=file, grab the data uploaded for use
+export function uploadImage(event, api) {
+    const [ file ] = event.target.files;
+    const userToken = checkStore('user');
     const validFileTypes = [ 'image/jpeg', 'image/png', 'image/jpg' ]
     const valid = validFileTypes.find(type => type === file.type);
 
@@ -104,9 +242,20 @@ export function uploadImage(event) {
     
     reader.onload = (e) => {
         // do something with the data result
-        const dataURL = e.target.result;
-        const image = createElement('img', null, { src: dataURL });
-        document.getElementById('large-feed').appendChild(image);
+        let dataURL = e.target.result;
+        const description = document.getElementById('description').value;
+        if (description === '') {
+            return;
+        }
+        dataURL = dataURL.replace(/^data:image\/png;base64,/, '');
+        api.makeAPIRequest('post/', options({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'POST', {description_text: description, src: dataURL}))
+            .then(postId => {
+                const id = postId.post_id;
+                api.makeAPIRequest('post/?id='+id, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+                    .then(imageInfo => {
+                        document.getElementById('userPosts').insertAdjacentElement('afterbegin', createPostTile(imageInfo, api));
+                    })
+            });
     };
 
     // this returns a base64 image
@@ -150,8 +299,8 @@ export function appendChilds(parent, childs) {
  * Creates label with text
  * @param {*} text 
  */
-export function createLabel(text) {
-    const label = createElement('h2');
+export function createLabel(text, type) {
+    const label = createElement(type);
     label.innerText = text;
     label.style.color = 'white';
     label.style.paddingRight = '20px';
