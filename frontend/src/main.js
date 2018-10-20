@@ -83,6 +83,7 @@ function homePage(data) {
                 window.localStorage.setItem('id', data.id);
             });
         loadFeed();
+        initEditProfile();
     }
 }
 
@@ -136,7 +137,13 @@ function createModal(type) {
     header.innerText = type;
     header.style.paddingLeft = '15px';
     appendChilds(modalHeader, [exit, header]);
-    appendChilds(modal, [modalHeader, modalContent]);
+    if (type === 'COMMENTS') {
+        modalContent.style.height = '600px';
+        const modalFooter = createElement('div', null, {class: 'modal-footer'});
+        appendChilds(modal, [modalHeader, modalContent, modalFooter]);    
+    } else {
+        appendChilds(modal, [modalHeader, modalContent]);
+    }
     return modal;
 }
 
@@ -145,6 +152,7 @@ function createModal(type) {
  * @param posts 
  */
 function appendPosts(parentElement, posts) {
+    if (!posts) return;
     posts.reduce((parent, post) => {
         parent.appendChild(createPostTile(post, api));
         parent.appendChild(createElement('br'));
@@ -164,6 +172,46 @@ function addLabelAndText(parent, labelText, text, id) {
     else appendChilds(parent, [label, text_, createElement('br')]);
 }
 
+function initEditProfile() {
+    removeChilds( document.getElementsByClassName('modal-content')[2]);
+    const modal = document.getElementsByClassName('modal')[2];
+    const content = document.getElementsByClassName('modal-content')[2];
+    content.style.height = '300px';
+    content.style.textAlign = 'center';
+    const mess = createElement('i');
+    mess.innerText = 'Change at least one field';
+    appendChilds(content, [mess, createElement('br')]);
+    const password = createInputBox('password', 'Enter password', 1);
+    const name = createInputBox('text', 'Enter name', 1);
+    const email = createInputBox('text', 'Enter email', 1);    
+    const passLabel = createLabel('New Password:', 'h2');
+    const nameLabel = createLabel('New Name:', 'h2');
+    const emailLabel = createLabel('New Email:', 'h2');
+    const done = createElement('a');
+    done.innerText = 'Done';
+    done.addEventListener('click', () => {
+        const userToken = checkStore('user');
+        const inputs = document.getElementsByClassName('input-text-boxes1');
+        const b = {};
+        if (inputs[2].value) b.email = inputs[2].value; 
+        if (inputs[0].value) b.name = inputs[0].value;
+        if (inputs[1].value) b.password = inputs[1].value;
+        api.makeAPIRequest('user/', options({Authorization: `Token ${userToken}`, 'Content-Type': 'application/json'}, 'PUT', b))
+            .then(data => {
+                if (data.msg === 'success') {
+                    if (b.name) document.getElementById('user-name').innerText = b.name;
+                    if (b.email) document.getElementById('user-email').innerText = b.email;
+                }
+            });
+        for (var box of inputs) {
+            box.value = '';
+        }
+        modal.style.display = 'none';
+    });
+    appendChilds(content, [nameLabel, name, passLabel, password, emailLabel, email, createElement('br'), createElement('br'), done]);
+    modal.appendChild(content);
+}
+
 function initProfile() {
     window.localStorage.setItem('logged', 2);
     const userToken = checkStore('user');
@@ -176,11 +224,25 @@ function initProfile() {
                 header.style.textAlign = 'center';
                 header.innerText = 'PROFILE';
                 profile.appendChild(header);
-                addLabelAndText(profile, 'Username: ', info.username);
-                addLabelAndText(profile, 'Name: ', info.name);
-                addLabelAndText(profile, 'Email: ', info.email);
+
+                const edit = createElement('a');
+                edit.innerText = 'Edit Profile';
+                edit.addEventListener('click', () => {
+                    const modal = document.getElementsByClassName('modal')[2];
+                    modal.style.display = 'block';
+                });
+                appendChilds(profile, [edit, createElement('br')]);
+                addLabelAndText(profile, 'Username: ', info.username, 'author');
+                addLabelAndText(profile, 'Name: ', info.name, 'user-name');
+                addLabelAndText(profile, 'Email: ', info.email, 'user-email');
                 addLabelAndText(profile, 'Followers: ', info.followed_num);
+                const userPostsLabel = createLabel('YOUR POSTS', 'h1');
+                userPosts.appendChild(userPostsLabel);
+                addUserPosts(info.posts, userToken);
                 addLabelAndText(profile, 'Following: ', '', 'following');
+                addLabelAndText(profile, 'Total Posts: ', info.posts.length);
+                addLabelAndText(profile, 'Total Likes: ', 0, 'total-likes');      
+                addUploadImage(profileForm);
                 const followingInfo = info.following;
                 followingInfo.map(user => {
                     api.makeAPIRequest('user/?id='+user, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
@@ -189,9 +251,6 @@ function initProfile() {
                         if (following) following.innerText += userInfo.name + ',\u00A0';
                     });
                 });
-                const userPostsLabel = createLabel('YOUR POSTS', 'h1');
-                userPosts.appendChild(userPostsLabel);
-                addUserPosts(profile, info.posts, userToken);
             });
     }
 
@@ -213,7 +272,7 @@ function addUploadImage(profileForm) {
     appendChilds(profileForm, [createElement('br'), createElement('br'), uploadLabel, description, uploader]);
 }
 
-function addUserPosts(profile, posts, userToken) {
+function addUserPosts(posts, userToken) {
     const up = document.getElementById('userPosts');
     var s = [];
     var totalLikes = 0;
@@ -224,8 +283,7 @@ function addUserPosts(profile, posts, userToken) {
                 s.unshift(postInfo);
                 if (s.length == posts.length) {
                     appendPosts(up, s);
-                    addLabelAndText(profile, 'Total Likes: ', totalLikes);               
-                    addUploadImage(profileForm);
+                    document.getElementById('total-likes').innerText = totalLikes;
                 }
             });
         });
@@ -238,10 +296,33 @@ function loadFeed() {
     const userToken = checkStore('user');
     api.makeAPIRequest('user/feed', optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
         .then(data => {
+            if (data.posts) window.localStorage.setItem('feedPosts', data.posts.length);
             appendPosts(feed, data.posts);
         })
         .then(() => initProfile())
 }
+
+window.addEventListener('scroll', () => {
+    const windowHeight = document.body.scrollHeight;
+    const currentHeight = window.scrollY;
+    const currPage = document.getElementById('register');
+    const userToken = checkStore('user');
+    const p = checkStore('feedPosts');
+    const n = 5;
+    const feed = document.getElementById('feed');
+
+    //console.log(currentHeight/windowHeight);
+    if (currentHeight/windowHeight > 0.4 && p) {
+        // add posts to feed         
+        if (currPage.innerText === 'PROFILE') {
+            api.makeAPIRequest('user/feed?p='+p+'&n='+n, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+                .then(data => {
+                    if (data.posts.length > 0) appendPosts(feed, data.posts);
+                });
+            window.localStorage.setItem('feedPosts', p+n);
+        }
+    }
+});
 
 function createButton(text, id) {
     const b = createElement('button');
@@ -295,7 +376,7 @@ const error = createElement('i', null, {id: 'error'});
 const error1 = createElement('i', null, {id: 'error'});
 appendChilds(loginForm, [header('LOGIN'), error, createElement('br'), userLabel1, username.cloneNode(), passLabel1, password.cloneNode(), createElement('br'), createElement('br'), createElement('br'), submitL]);
 appendChilds(registerForm, [header('SIGNUP'), error1, createElement('br'), nameLabel, name, createElement('br'), emailLabel, email, userLabel, username, passLabel, password, createElement('br'), createElement('br'), createElement('br'), submitR]);
-appendChilds(body, [createModal('COMMENTS'), createModal('LIKED BY'), feed, loginForm, registerForm, profileForm, userPosts]);
+appendChilds(body, [createModal('COMMENTS'), createModal('LIKED BY'), createModal('EDIT PROFILE'), feed, loginForm, registerForm, profileForm, userPosts]);
 
 // reload feed page when user refreshes
 if (checkStore('user')) {
@@ -309,6 +390,7 @@ if (checkStore('user')) {
     formChange('loginForm', checkStore('currentPage'));
     window.localStorage.setItem('logged', 1);
     loadFeed();
+    initEditProfile();
 } else {
     window.localStorage.setItem('currentPage', 'loginForm');
 }

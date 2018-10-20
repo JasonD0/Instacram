@@ -169,7 +169,6 @@ a:hover {
     color: white;
     background: #2d2d2d;
     padding: 5px 20px 5px 20px;
-    color: white;
     margin: 80px auto 0px auto;
     width: 500px;
 }
@@ -182,6 +181,16 @@ a:hover {
     color: white;
     width: 500px;
     height: 750px;
+}
+
+.modal-footer {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    background: #2d2d2d;
+    padding: 20px 22px 0px 16px;
+    margin: auto;
+    width: 500px;
+    height: 150px;
 }
 
 .exit {

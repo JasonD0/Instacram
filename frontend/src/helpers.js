@@ -81,9 +81,33 @@ function addViewComments(numComments, postId, userToken, api) {
         document.getElementsByClassName('modal')[0].style.display = 'block';
         removeChilds(document.getElementsByClassName('modal-content')[0]);
         api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-            .then(data => addCommentModalContents(data));
+            .then(data => addCommentModalContents(data))
+            .then(() => addPostComment(postId, userToken, api));
         });
     return comments;    
+}
+
+function addPostComment(postId, userToken, api) {
+    const postButton = document.getElementById('post-button');
+    const author = document.getElementById('author').innerText;
+    const unixTime = new Date().getTime()/1000;
+    postButton.addEventListener('click', () => {
+        const comment = document.getElementById('user-comment').value;
+        api.makeAPIRequest('post/comment?id='+postId, options({Authorization: `Token ${userToken}`, 'Content-Type': 'application/json'}, 'PUT', {author: author, published: unixTime, comment: comment}))
+            .then(data => {
+                if (data.message === 'success') {
+                    const commentSection = document.getElementsByClassName('modal-content')[0];
+                    const c = createElement('i', null, {class: 'comment'});
+                    c.innerText = comment;
+                    const u = createElement('a', null, {class: 'user'});
+                    u.innerText = author;
+                    const date = createElement('i', null, {class: 'date'});
+                    date.innerText = convertToTime(unixTime);
+                    date.style.fontSize = '10px';
+                    appendChilds(commentSection, [u, createElement('br'), createElement('br'), c, createElement('br'), date, createElement('br')]);
+                }
+            });
+    });
 }
 
 /**
@@ -130,7 +154,19 @@ function addLikes(numLikes, postId, userToken, api) {
  * @param {*} data 
  */
 function addCommentModalContents(data) {
-    const userComments = data.comments;
+    const modalContent = document.getElementsByClassName('modal-content')[0];
+    const modalFooter = document.getElementsByClassName('modal-footer')[0];
+    removeChilds(modalFooter);
+    const comment = createElement('textarea', null, {id: 'user-comment'});
+    comment.placeholder = 'Enter comment';
+    comment.style.width = '500px';
+    modalFooter.appendChild(comment);
+    const postButton = createElement('a', null, {id: 'post-button'});
+    postButton.innerText = 'Enter';
+    postButton.style.fontSize = '15px';
+    modalFooter.appendChild(postButton);
+
+    const userComments = data.comments.sort((a,b) => {return a.published - b.published});
     userComments.reduce((cs, us) => {
         const c = createElement('i', null, {class: 'comment'});
         c.innerText = us.comment;
@@ -140,8 +176,8 @@ function addCommentModalContents(data) {
         date.innerText = convertToTime(us.published);
         date.style.fontSize = '10px';
         appendChilds(cs, [u, createElement('br'), createElement('br'), c, createElement('br'), date, createElement('br')]);
-        return document.getElementsByClassName('modal-content')[0];
-    }, document.getElementsByClassName('modal-content')[0]);
+        return modalContent;
+    }, modalContent);
 }
 
 /**
@@ -213,7 +249,7 @@ export function removeChilds(element) {
  */
 export function convertToTime(n) {
     let time = new Date(parseFloat(n)*1000);
-    return time.toUTCString();
+    return time.toString();
 }
 
 
@@ -313,9 +349,9 @@ export function createLabel(text, type) {
  * @param {*} type 
  * @param {*} placeholder 
  */
-export function createInputBox(type, placeholder) {
+export function createInputBox(type, placeholder, i) {
     const box = createElement('input');
-    box.className = 'input-text-boxes';
+    box.className = (i) ? 'input-text-boxes1' : 'input-text-boxes';
     box.type = type;
     box.required = true;
     box.placeholder = placeholder;
