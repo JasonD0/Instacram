@@ -45,11 +45,11 @@ export function createPostTile(post, api) {
         { src: 'data:image/png;base64,' + post.src, alt: post.meta.description_text, class: 'post-image' }));
 
     const name = createElement('a');
-    name.innerText = post.meta.author + "\n";
+    name.innerText = post.meta.author + '\n';
     name.className = 'name';
     
     const description = createElement('p');
-    description.innerText = '\"' + post.meta.description_text + '\"';
+    description.innerText = '"' + post.meta.description_text + '"';
     description.style.textAlign = 'center';
     
     const numComments = (post.comments) ? post.comments.length : 0;
