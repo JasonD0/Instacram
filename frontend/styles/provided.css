@@ -212,6 +212,7 @@ a:hover {
 }
 
 #profileForm {
+    padding-top: 5px;
     text-align: left;
     float: left;
     overflow-wrap: break-word;
