@@ -1,6 +1,6 @@
 import { appendChilds } from './html-helpers.js';
 import { addViewComments, addLikes, addViewLikes } from './modal-helpers.js';
-import { initProfile } from './main.js';
+import { initProfile, initEditProfile } from './main.js';
 
 /* returns an empty array of size max */
 export const range = (max) => Array(max).fill(null);
@@ -71,6 +71,12 @@ export function createPostTile(post, api) {
     return section;
 }
 
+/**
+ * Clicking on a username  transports user to the profile page
+ * @param {*} username 
+ * @param {*} nameElement 
+ * @param {*} api 
+ */
 export function viewUserProfile(username, nameElement, api) {
     nameElement.addEventListener('click', () => {
         const userToken = checkStore('user');
@@ -117,6 +123,9 @@ export function uploadImage(event, api) {
                 const id = postId.post_id;
                 api.makeAPIRequest('post/?id='+id, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
                     .then(imageInfo => {
+                        const totalPostsCounter = document.getElementById('total-posts');
+                        let x = parseInt(totalPostsCounter.innerText.replace(/\D+/g, ''));
+                        totalPostsCounter.innerText = totalPostsCounter.innerText.replace(x, `${x+1}`);
                         document.getElementById('userPosts').insertAdjacentElement('afterbegin', createPostTile(imageInfo, api));
                     })
             });

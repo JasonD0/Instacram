@@ -97,6 +97,22 @@ a:hover {
     letter-spacing: 0px;
 }
 
+#follow-input {
+    height: 25px;
+    padding-left: 10px;
+    font-size: 12px;
+    display: none;
+}
+
+#follow {
+    display: none;
+}
+
+#un-follow {
+    display: none;
+}
+
+
 #large-feed {
     text-align: center;
     padding: 100px;

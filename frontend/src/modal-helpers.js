@@ -31,7 +31,7 @@ export function addViewComments(numComments, postId, userToken, api) {
  */
 function addPostComment(postId, userToken, api, commentsLabel) {
     const postButton = document.getElementById('post-button');
-    const author = document.getElementById('author').innerText;
+    const author = checkStore('author');
 
     postButton.addEventListener('click', () => {
         const comment = document.getElementById('user-comment').value;
@@ -158,16 +158,20 @@ export function addLikes(numLikes, postId, userToken, api) {
 function updateLikes(likeButton, postId, userToken, api) {
     api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
     .then(data => {
+        const totalLikesCounter = document.getElementById('total-likes');
         let x = parseInt(likeButton.innerText.replace(/\D+/g, ''));
+        let y = parseInt(totalLikesCounter.innerText.replace(/\D+/g, ''));
         // user unliked
         if (data.meta.likes.length <= parseInt(checkStore(postId))) {
             window.localStorage.setItem(postId, x-1);
             api.makeAPIRequest('post/unlike?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'PUT'));                                
             if (x > 0) likeButton.innerText = likeButton.innerText.replace(x, `${x-1}`);
+            totalLikesCounter.innerText = totalLikesCounter.innerText.replace(y, `${y-1}`);
         // user liked
         } else {
             window.localStorage.setItem(postId, x+1);
             likeButton.innerText = likeButton.innerText.replace(x, `${x+1}`);
+            totalLikesCounter.innerText = totalLikesCounter.innerText.replace(y, `${y+1}`);
         }                  
     });
 }

@@ -16,6 +16,12 @@ login.addEventListener('click', ()=>{
         formChange('registerForm', 'loginForm');
     } else {
         // LOGOUT
+        // remove user search bar for following/unfollowing
+        document.getElementById('follow').style.display = 'none';
+        document.getElementById('un-follow').style.display = 'none';
+        document.getElementById('follow-input').style.display = 'none';
+
+        // change pages and navigation text
         formChange(checkStore('currentPage'), 'loginForm');
         formChange('userPosts', 'loginForm');
         register.innerText = 'REGISTER';
@@ -54,6 +60,40 @@ register.addEventListener('click', ()=>{
         window.localStorage.setItem('currentPage', 'feed');
     }
     window.scrollTo(0,0);
+});
+
+// follow button to follow user searched in search bar
+const followButton = document.getElementById('follow');
+followButton.addEventListener('click', () => {
+    const user = document.getElementById('follow-input');
+    const userToken = checkStore('user');
+    api.makeAPIRequest('user/follow?username='+user.value, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'PUT'))
+        .then(data => {
+            if (data.message === 'User Not Found') {
+                user.value = data.message;
+            } else if (data.message === 'success') {
+                const following = document.getElementById('following');
+                if (following) following.innerText += user.value + ',\u00A0';
+                user.value = '';
+            }
+        });
+});
+
+// unfollow button to unfollow user searched in search bar
+const unfollowButton = document.getElementById('un-follow');
+unfollowButton.addEventListener('click', () => {
+    const user = document.getElementById('follow-input');
+    const userToken = checkStore('user');
+    api.makeAPIRequest('user/unfollow?username='+user.value, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'PUT'))
+        .then(data => {
+            if (data.message === 'User Not Found') {
+                user.value = data.message;
+            } else if (data.message === 'success') {
+                const following = document.getElementById('following');
+                if (following) following.innerText = following.innerText.replace(user.value + ',\u00A0', '');
+                user.value = '';
+            }
+        });
 });
 
 // login button
@@ -113,8 +153,14 @@ userPosts.style.display = 'none';
  * @param {*} data 
  */
 function homePage(data) {
-   // window.localStorage.setItem('logged', 1);   // logged key prevents unnecessary reloading of profile when nav item clicked
     if (data.token) {
+        window.localStorage.setItem('changesToFeedContent', 0);
+
+        // show search bar for following/unfollowing user
+        document.getElementById('follow').style.display = 'inline-block';
+        document.getElementById('un-follow').style.display = 'inline-block';
+        document.getElementById('follow-input').style.display = 'inline-block';
+
         // change navigation 
         formChange(checkStore('currentPage'), 'feed');
         window.localStorage.setItem('currentPage', 'feed');
@@ -123,11 +169,13 @@ function homePage(data) {
         login.innerText = 'LOGOUT';
         
         const userToken = data.token;
-        // store user id
+        // store user id and username
         api.makeAPIRequest('user/', optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
             .then(data => {
                 window.localStorage.setItem('id', data.id);
+                window.localStorage.setItem('author', data.username);
             })
+            // load feed and profile
             .then(() => {
                 loadFeed();
                 initEditProfile();
@@ -151,14 +199,14 @@ function appendPosts(parentElement, posts) {
 /**
  * create modal for editing profile
  */
-function initEditProfile() {
+export function initEditProfile() {
     removeChilds(document.getElementsByClassName('modal-content')[2]);
     const modal = document.getElementsByClassName('modal')[2];
     const content = document.getElementsByClassName('modal-content')[2];
     content.style.height = '300px';
     content.style.textAlign = 'center';
 
-    addEditProfileElements(content);
+    addEditProfileElements(content);    
 
     // done 'button' to update new user information
     const done = createElement('a');
@@ -169,7 +217,6 @@ function initEditProfile() {
         for (var box of inputs) box.value = '';
         modal.style.display = 'none';
     });
-
     appendChilds(content, [createElement('br'), createElement('br'), done]);
     modal.appendChild(content);
 }
@@ -226,7 +273,7 @@ export function initProfile(userId) {
             profile.appendChild(header('PROFILE'));
             
             // 'button' for showing modal to edit user information
-            if (!userId) {
+            if (userId == parseInt(checkStore('id')) || !userId) {
                 const edit = createElement('a');
                 edit.innerText = 'Edit Profile';
                 edit.addEventListener('click', () => {
@@ -235,7 +282,6 @@ export function initProfile(userId) {
                 });
                 appendChilds(profile, [edit, createElement('br')]);
             }
-
             appendProfileInformation(profile, info, userToken, id);
         });
 }
@@ -253,7 +299,7 @@ function appendProfileInformation(profile, info, userToken, userId) {
     userPosts.appendChild(header('POSTS'));
     addUserPosts(info.posts, userToken);
     addLabelAndText(profile, 'Following: ', '', 'following');
-    addLabelAndText(profile, 'Total Posts: ', info.posts.length);
+    addLabelAndText(profile, 'Total Posts: ', info.posts.length, 'total-posts');
     addLabelAndText(profile, 'Total Likes: ', 0, 'total-likes');      
     if (userId == parseInt(checkStore('id'))) addUploadImage(profileForm);
 
@@ -323,6 +369,7 @@ function addUserPosts(postIds, userToken) {
  * Loads user feed
  */
 function loadFeed() {
+    window.localStorage.setItem('changesToFeedContent', 0);
     const userToken = checkStore('user');
     api.makeAPIRequest('user/feed', optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
     .then(data => {
@@ -385,6 +432,12 @@ appendChilds(body, [createModal('COMMENTS'), createModal('LIKED BY'), createModa
 
 // reload feed page when user refreshes
 if (checkStore('user')) {
+    // show user search bar for following/unfollowing
+    document.getElementById('follow').style.display = 'inline-block';
+    document.getElementById('un-follow').style.display = 'inline-block';
+    document.getElementById('follow-input').style.display = 'inline-block';
+
+    // change navigation text and change page to previous page before reload
     login.innerText = 'LOGOUT';
     if (checkStore('currentPage') === 'profileForm') {
         register.innerText = 'FEED';
@@ -393,7 +446,6 @@ if (checkStore('user')) {
         register.innerText = 'PROFILE';
     }
     formChange('loginForm', checkStore('currentPage'));
-   // window.localStorage.setItem('logged', 1);
     loadFeed();
     initEditProfile();
 } else {
