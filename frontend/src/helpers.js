@@ -1,5 +1,6 @@
 import { appendChilds } from './html-helpers.js';
 import { addViewComments, addLikes, addViewLikes } from './modal-helpers.js';
+import { initProfile } from './main.js';
 
 /* returns an empty array of size max */
 export const range = (max) => Array(max).fill(null);
@@ -45,11 +46,12 @@ export function createPostTile(post, api) {
         { src: 'data:image/png;base64,' + post.src, alt: post.meta.description_text, class: 'post-image' }));
 
     const name = createElement('a');
-    name.innerText = post.meta.author + '\n';
+    name.innerText = post.meta.author + "\n";
     name.className = 'name';
+    viewUserProfile(post.meta.author, name, api);
     
     const description = createElement('p');
-    description.innerText = '"' + post.meta.description_text + '"';
+    description.innerText = '\"' + post.meta.description_text + '\"';
     description.style.textAlign = 'center';
     
     const numComments = (post.comments) ? post.comments.length : 0;
@@ -67,6 +69,26 @@ export function createPostTile(post, api) {
     appendChilds(section, [name, likes, viewLikes, description, comments, date]);
 
     return section;
+}
+
+export function viewUserProfile(username, nameElement, api) {
+    nameElement.addEventListener('click', () => {
+        const userToken = checkStore('user');
+        document.getElementsByClassName('modal')[0].style.display = 'none';
+        document.getElementsByClassName('modal')[1].style.display = 'none';
+        api.makeAPIRequest('user/?username='+username, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+            .then(userInfo => {
+                register.innerText = 'FEED';
+                window.localStorage.setItem('profile', userInfo.id);
+                initProfile(userInfo.id);
+                formChange(checkStore('currentPage'), 'userPosts');
+                formChange(checkStore('currentPage'), 'profileForm');
+                window.localStorage.setItem('currentPage', 'profileForm');
+            })
+            .then(() => {
+                window.localStorage.setItem('profile', -1);
+            });
+    });
 }
 
 // Given an input element of type=file, grab the data uploaded for use

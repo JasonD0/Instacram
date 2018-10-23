@@ -1,5 +1,5 @@
 import { appendChilds, removeChilds } from './html-helpers.js';
-import { checkStore, createElement, optionsNoBody, options, convertToTime } from './helpers.js';
+import { checkStore, createElement, optionsNoBody, options, convertToTime, viewUserProfile } from './helpers.js';
 
 /**
  * Allows user to see comments of the post
@@ -16,7 +16,7 @@ export function addViewComments(numComments, postId, userToken, api) {
         document.getElementsByClassName('modal')[0].style.display = 'block';
         removeChilds(document.getElementsByClassName('modal-content')[0]);
         api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
-            .then(data => addCommentModalContents(data))
+            .then(data => addCommentModalContents(data, api))
             .then(() => addPostComment(postId, userToken, api, comments));
         });
     return comments;    
@@ -32,13 +32,14 @@ export function addViewComments(numComments, postId, userToken, api) {
 function addPostComment(postId, userToken, api, commentsLabel) {
     const postButton = document.getElementById('post-button');
     const author = document.getElementById('author').innerText;
-    const unixTime = new Date().getTime()/1000;
+
     postButton.addEventListener('click', () => {
         const comment = document.getElementById('user-comment').value;
+        const unixTime = new Date().getTime()/1000;
         api.makeAPIRequest('post/comment?id='+postId, options({Authorization: `Token ${userToken}`, 'Content-Type': 'application/json'}, 'PUT', {author: author, published: unixTime, comment: comment}))
             .then(data => {
                 if (data.message === 'success') {
-                    createComment(comment, author, unixTime);
+                    createComment(comment, author, unixTime, api);
                     let x = parseInt(commentsLabel.innerText.replace(/\D+/g, ''));
                     commentsLabel.innerText = commentsLabel.innerText.replace(x, x+1);                
                 }
@@ -52,12 +53,13 @@ function addPostComment(postId, userToken, api, commentsLabel) {
  * @param {*} author 
  * @param {*} unixTime 
  */
-function createComment(comment, author, unixTime) {
+function createComment(comment, author, unixTime, api) {
     const commentSection = document.getElementsByClassName('modal-content')[0];
     const c = createElement('i', null, {class: 'comment'});
     c.innerText = comment;
     const u = createElement('a', null, {class: 'user'});
     u.innerText = author;
+    viewUserProfile(author, u, api);
     const date = createElement('i', null, {class: 'date'});
     date.innerText = convertToTime(unixTime);
     date.style.fontSize = '10px';
@@ -69,7 +71,7 @@ function createComment(comment, author, unixTime) {
  * Adds comments of the post to the pop-up modal
  * @param {*} data 
  */
-function addCommentModalContents(data) {
+function addCommentModalContents(data, api) {
     const modalFooter = document.getElementsByClassName('modal-footer')[0];
     removeChilds(modalFooter);
     
@@ -84,14 +86,14 @@ function addCommentModalContents(data) {
     postButton.style.fontSize = '15px';
     appendChilds(modalFooter, [comment, postButton]);
     
-    addCommentSection(data);
+    addCommentSection(data, api);
 }
 
 /**
  * Add comment section 
  * @param {*} data 
  */
-function addCommentSection(data) {
+function addCommentSection(data, api) {
     const modalContent = document.getElementsByClassName('modal-content')[0];
     const userComments = data.comments.sort((a,b) => {return a.published - b.published});
     userComments.reduce((cs, us) => {
@@ -99,6 +101,7 @@ function addCommentSection(data) {
         c.innerText = us.comment;
         const u = createElement('a', null, {class: 'user'});
         u.innerText = us.author;
+        viewUserProfile(us.author, u, api);
         const date = createElement('i', null, {class: 'date'});
         date.innerText = convertToTime(us.published);
         date.style.fontSize = '10px';
@@ -183,6 +186,7 @@ function addLikeModalContent(data, userToken, api) {
         api.makeAPIRequest('user/?id='+us, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
         .then(userInfo => {
             u.innerText = userInfo.username;   
+            viewUserProfile(userInfo.username, u, api);
         });
         appendChilds(cs, [u, createElement('br'), createElement('br')]);
         return document.getElementsByClassName('modal-content')[1];

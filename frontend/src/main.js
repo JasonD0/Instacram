@@ -39,7 +39,10 @@ register.addEventListener('click', ()=>{
     // change page to profile
     } else if (register.innerText === 'PROFILE') {
         register.innerText = 'FEED';
-        if (checkStore('logged') == 1) initProfile();
+        if (checkStore('profile') == -1) {
+            window.localStorage.setItem('profile', -2);
+            initProfile();
+        }
         formChange(checkStore('currentPage'), 'profileForm');
         formChange(checkStore('currentPage'), 'userPosts');
         window.localStorage.setItem('currentPage', 'profileForm');
@@ -110,7 +113,7 @@ userPosts.style.display = 'none';
  * @param {*} data 
  */
 function homePage(data) {
-    window.localStorage.setItem('logged', 1);
+   // window.localStorage.setItem('logged', 1);   // logged key prevents unnecessary reloading of profile when nav item clicked
     if (data.token) {
         // change navigation 
         formChange(checkStore('currentPage'), 'feed');
@@ -124,9 +127,11 @@ function homePage(data) {
         api.makeAPIRequest('user/', optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
             .then(data => {
                 window.localStorage.setItem('id', data.id);
+            })
+            .then(() => {
+                loadFeed();
+                initEditProfile();
             });
-        loadFeed();
-        initEditProfile();
     }
 }
 
@@ -208,10 +213,12 @@ function updateUserInfo(inputs) {
 /**
  * Create user profile
  */
-function initProfile() {
-    window.localStorage.setItem('logged', 2);
+export function initProfile(userId) {
+    //window.localStorage.setItem('logged', 2);
     const userToken = checkStore('user');
-    const id = checkStore('id');
+    const id = (userId) ? userId : checkStore('id');
+    removeChilds(document.getElementById('profileForm'));
+    removeChilds(document.getElementById('userPosts'));
     // get user information
     api.makeAPIRequest('user/?id='+id, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))    
         .then(info => {
@@ -219,15 +226,17 @@ function initProfile() {
             profile.appendChild(header('PROFILE'));
             
             // 'button' for showing modal to edit user information
-            const edit = createElement('a');
-            edit.innerText = 'Edit Profile';
-            edit.addEventListener('click', () => {
-                const modal = document.getElementsByClassName('modal')[2];
-                modal.style.display = 'block';
-            });
-            appendChilds(profile, [edit, createElement('br')]);
+            if (!userId) {
+                const edit = createElement('a');
+                edit.innerText = 'Edit Profile';
+                edit.addEventListener('click', () => {
+                    const modal = document.getElementsByClassName('modal')[2];
+                    modal.style.display = 'block';
+                });
+                appendChilds(profile, [edit, createElement('br')]);
+            }
 
-            appendProfileInformation(profile, info, userToken);
+            appendProfileInformation(profile, info, userToken, id);
         });
 }
 
@@ -236,17 +245,17 @@ function initProfile() {
  * @param {*} profile 
  * @param {*} info 
  */
-function appendProfileInformation(profile, info, userToken) {
+function appendProfileInformation(profile, info, userToken, userId) {
     addLabelAndText(profile, 'Username: ', info.username, 'author');
     addLabelAndText(profile, 'Name: ', info.name, 'user-name');
     addLabelAndText(profile, 'Email: ', info.email, 'user-email');
     addLabelAndText(profile, 'Followers: ', info.followed_num);
-    userPosts.appendChild(header('YOUR POSTS'));
+    userPosts.appendChild(header('POSTS'));
     addUserPosts(info.posts, userToken);
     addLabelAndText(profile, 'Following: ', '', 'following');
     addLabelAndText(profile, 'Total Posts: ', info.posts.length);
     addLabelAndText(profile, 'Total Likes: ', 0, 'total-likes');      
-    addUploadImage(profileForm);
+    if (userId == parseInt(checkStore('id'))) addUploadImage(profileForm);
 
     // get people the user is following
     const followingInfo = info.following;
@@ -255,7 +264,7 @@ function appendProfileInformation(profile, info, userToken) {
         api.makeAPIRequest('user/?id='+user, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
         .then(userInfo => {
             const following = document.getElementById('following');
-            if (following) following.innerText += userInfo.name + ',\u00A0';
+            if (following) following.innerText += userInfo.username + ',\u00A0';
         });
     });
 }
@@ -320,7 +329,7 @@ function loadFeed() {
         if (data.posts) window.localStorage.setItem('feedPosts', data.posts.length);
         appendPosts(feed, data.posts);
     })
-    .then(() => initProfile())
+    .then(() => initProfile());
 }
 
 // adds infinite scroll to window
@@ -384,7 +393,7 @@ if (checkStore('user')) {
         register.innerText = 'PROFILE';
     }
     formChange('loginForm', checkStore('currentPage'));
-    window.localStorage.setItem('logged', 1);
+   // window.localStorage.setItem('logged', 1);
     loadFeed();
     initEditProfile();
 } else {
