@@ -1,6 +1,10 @@
 import { createElement } from './helpers.js';
 
 /**
+ * functions to create html elements
+ */
+
+/**
  * Creates header text
  * @param {*} text 
  */

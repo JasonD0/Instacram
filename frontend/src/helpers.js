@@ -1,6 +1,6 @@
 import { appendChilds } from './html-helpers.js';
 import { addViewComments, addLikes, addViewLikes } from './modal-helpers.js';
-import { initProfile, initEditProfile } from './main.js';
+import { initProfile, initEditProfile } from './profile-helpers.js';
 
 /* returns an empty array of size max */
 export const range = (max) => Array(max).fill(null);
@@ -86,7 +86,7 @@ export function viewUserProfile(username, nameElement, api) {
             .then(userInfo => {
                 register.innerText = 'FEED';
                 window.localStorage.setItem('profile', userInfo.id);
-                initProfile(userInfo.id);
+                initProfile(userInfo.id, api);
                 formChange(checkStore('currentPage'), 'userPosts');
                 formChange(checkStore('currentPage'), 'profileForm');
                 window.localStorage.setItem('currentPage', 'profileForm');
@@ -115,14 +115,16 @@ export function uploadImage(event, api) {
         let dataURL = e.target.result;
         const description = document.getElementById('description').value;
         if (description === '') return;
-        
         // post new image 
         dataURL = dataURL.replace(/^data:image\/png;base64,/, '');
+        dataURL = dataURL.replace(/^data:image\/jpg;base64,/, '');
+        dataURL = dataURL.replace(/^data:image\/jpeg;base64,/, '');
         api.makeAPIRequest('post/', options({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'POST', {description_text: description, src: dataURL}))
             .then(postId => {
                 const id = postId.post_id;
                 api.makeAPIRequest('post/?id='+id, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
                     .then(imageInfo => {
+                        document.getElementById('description').value = '';
                         const totalPostsCounter = document.getElementById('total-posts');
                         let x = parseInt(totalPostsCounter.innerText.replace(/\D+/g, ''));
                         totalPostsCounter.innerText = totalPostsCounter.innerText.replace(x, `${x+1}`);
@@ -133,6 +135,19 @@ export function uploadImage(event, api) {
 
     // this returns a base64 image
     reader.readAsDataURL(file);
+}
+
+/**
+ * Adds posts to feed
+ * @param posts 
+ */
+export function appendPosts(parentElement, posts, api) {
+    if (!posts) return;
+    posts.reduce((parent, post) => {
+        parent.appendChild(createPostTile(post, api));
+        parent.appendChild(createElement('br'));
+        return parent;
+    }, parentElement);
 }
 
 /* 
@@ -181,6 +196,7 @@ export function convertToTime(n) {
  * @param {*} pageB 
  */
 export function formChange(pageA, pageB) {
+    window.localStorage.setItem('currentScrollHeight', 0);
     const x = document.getElementById(pageA);
     const y = document.getElementById(pageB);
     
@@ -189,4 +205,60 @@ export function formChange(pageA, pageB) {
     for (var box of document.getElementsByClassName('input-text-boxes')) {
         box.value = '';
     }
+}
+
+/**
+ * Changes page to home page
+ * @param {*} data 
+ */
+export function homePage(data, api) {
+    if (data.token) {
+        window.localStorage.setItem('changesToFeedContent', 0);
+
+        userSearchDisplay('inline-block');
+
+        // change navigation 
+        formChange(checkStore('currentPage'), 'feed');
+        window.localStorage.setItem('currentPage', 'feed');
+        window.localStorage.setItem('user', data.token);
+        register.innerText = 'PROFILE';
+        login.innerText = 'LOGOUT';
+        
+        const userToken = data.token;
+        // store user id and username
+        api.makeAPIRequest('user/', optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+            .then(data => {
+                window.localStorage.setItem('id', data.id);
+                window.localStorage.setItem('author', data.username);
+            })
+            // load feed and profile
+            .then(() => {
+                loadFeed(api);
+                initEditProfile(api);
+            });
+    }
+}
+
+/**
+ * Loads user feed
+ */
+export function loadFeed(api) {
+    window.localStorage.setItem('changesToFeedContent', 0);
+    const userToken = checkStore('user');
+    api.makeAPIRequest('user/feed', optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
+    .then(data => {
+        if (data.posts) window.localStorage.setItem('feedPosts', data.posts.length);
+        appendPosts(feed, data.posts, api);
+    })
+    .then(() => initProfile(null, api));
+}
+
+/**
+ * Show/Hide search bar for users to follow/unfollow
+ * @param {*} displayType 
+ */
+export function userSearchDisplay(displayType) {
+    document.getElementById('follow').style.display = displayType;
+    document.getElementById('un-follow').style.display = displayType;
+    document.getElementById('follow-input').style.display = displayType;
 }

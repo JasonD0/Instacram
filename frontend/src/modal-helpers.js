@@ -2,6 +2,10 @@ import { appendChilds, removeChilds } from './html-helpers.js';
 import { checkStore, createElement, optionsNoBody, options, convertToTime, viewUserProfile } from './helpers.js';
 
 /**
+ * Helper functions to create modals to view likes and comments 
+ */
+
+/**
  * Allows user to see comments of the post
  * @param {*} numComments 
  * @param {*} postId 
