@@ -16,7 +16,7 @@ export function addViewComments(numComments, postId, userToken, api) {
     const comments = createElement('a');
     comments.innerText = 'View all ' + numComments + ' comments\n\u00A0\n'; 
     comments.className = 'comments';
-    comments.addEventListener('click', () => {
+    comments.addEventListener('click', (event) => {
         document.getElementsByClassName('modal')[0].style.display = 'block';
         removeChilds(document.getElementsByClassName('modal-content')[0]);
         api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
@@ -37,7 +37,7 @@ function addPostComment(postId, userToken, api, commentsLabel) {
     const postButton = document.getElementById('post-button');
     const author = checkStore('author');
 
-    postButton.addEventListener('click', () => {
+    postButton.addEventListener('click', (event) => {
         const comment = document.getElementById('user-comment').value;
         const unixTime = new Date().getTime()/1000;
         api.makeAPIRequest('post/comment?id='+postId, options({Authorization: `Token ${userToken}`, 'Content-Type': 'application/json'}, 'PUT', {author: author, published: unixTime, comment: comment}))
@@ -109,7 +109,7 @@ function addCommentSection(data, api) {
         const date = createElement('i', null, {class: 'date'});
         date.innerText = convertToTime(us.published);
         date.style.fontSize = '10px';
-        appendChilds(cs, [u, createElement('br'), createElement('br'), c, createElement('br'), date, createElement('br')]);
+        appendChilds(cs, [u, createElement('br'), c, createElement('br'), date, createElement('br')]);
         return modalContent;
     }, modalContent);
 }
@@ -124,7 +124,7 @@ export function addViewLikes(postId, userToken, api) {
     const viewLikes = createElement('a');
     viewLikes.innerText = 'View likes';
     viewLikes.className = 'viewLikes';
-    viewLikes.addEventListener('click', () => {
+    viewLikes.addEventListener('click', (event) => {
         document.getElementsByClassName('modal')[1].style.display = 'block';
         removeChilds(document.getElementsByClassName('modal-content')[1]);
         api.makeAPIRequest('post/?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
@@ -144,7 +144,7 @@ export function addLikes(numLikes, postId, userToken, api) {
     const likes = createElement('a');
     likes.innerText = '\n\u00A0\u00A0\u00A0 ❤ ' + numLikes + ' likes ·'; 
     likes.className = 'likes';
-    likes.addEventListener('click', () => {
+    likes.addEventListener('click', (event) => {
         api.makeAPIRequest('post/like?id='+postId, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'PUT'))
         .then(() => {
             updateLikes(likes, postId, userToken, api);         
@@ -195,6 +195,7 @@ function addLikeModalContent(data, userToken, api) {
         .then(userInfo => {
             u.innerText = userInfo.username;   
             viewUserProfile(userInfo.username, u, api);
+
         });
         appendChilds(cs, [u, createElement('br'), createElement('br')]);
         return document.getElementsByClassName('modal-content')[1];

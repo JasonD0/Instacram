@@ -26,7 +26,7 @@ userPosts.style.display = 'none';
 // navigation item for login/logout
 const login = document.getElementById('login');
 login.innerText = 'LOGIN';
-login.addEventListener('click', ()=>{
+login.addEventListener('click', (event)=>{
     if (login.innerText === 'LOGIN') {
         formChange('registerForm', 'loginForm');
     } else {
@@ -49,7 +49,7 @@ login.addEventListener('click', ()=>{
 // navigation item for register/feed/profile
 const register = document.getElementById('register');
 register.innerText = 'REGISTER';
-register.addEventListener('click', ()=>{
+register.addEventListener('click', (event)=>{
     // change page to register
     if (register.innerText === 'REGISTER') {
         formChange('loginForm', 'registerForm');
@@ -76,7 +76,7 @@ register.addEventListener('click', ()=>{
 
 // follow button to follow user searched in search bar
 const followButton = document.getElementById('follow');
-followButton.addEventListener('click', () => {
+followButton.addEventListener('click', (event) => {
     const user = document.getElementById('follow-input');
     const userToken = checkStore('user');
     api.makeAPIRequest('user/follow?username='+user.value, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'PUT'))
@@ -94,7 +94,7 @@ followButton.addEventListener('click', () => {
 
 // unfollow button to unfollow user searched in search bar
 const unfollowButton = document.getElementById('un-follow');
-unfollowButton.addEventListener('click', () => {
+unfollowButton.addEventListener('click', (event) => {
     const user = document.getElementById('follow-input');
     const userToken = checkStore('user');
     api.makeAPIRequest('user/unfollow?username='+user.value, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'PUT'))
@@ -112,7 +112,7 @@ unfollowButton.addEventListener('click', () => {
 
 // login button
 const submitL = createButton('Login', 'submit');
-submitL.addEventListener('click', () => {
+submitL.addEventListener('click', (event) => {
     const tb = document.getElementsByClassName('input-text-boxes');
     // request login  get token
     api.makeAPIRequest('auth/login', options({ 'Content-Type': 'application/json' }, 'POST', {username: tb[0].value, password: tb[1].value}))
@@ -131,7 +131,7 @@ submitL.addEventListener('click', () => {
 
 // signup button
 const submitR = createButton('Signup', 'submit');
-submitR.addEventListener('click', () => {
+submitR.addEventListener('click', (event) => {
     const tb = Array.from(document.getElementsByClassName('input-text-boxes')).slice(2, 6);
     // request signup  get token
     api.makeAPIRequest('auth/signup', options({ 'Content-Type': 'application/json' }, 'POST', {username:  tb[2].value, password: tb[3].value, email: tb[1].value, name: tb[0].value})) 
@@ -150,7 +150,7 @@ submitR.addEventListener('click', () => {
 
 window.localStorage.setItem('currentScrollHeight', 0);
 // adds infinite scroll to window
-window.addEventListener('scroll', () => {
+window.addEventListener('scroll', (event) => {
     const windowHeight = document.body.scrollHeight;
     let x = (checkStore('scrollY')) ? parseInt(checkStore('currentScrollHeight')) : 0;
     const currentHeight = window.scrollY - x;

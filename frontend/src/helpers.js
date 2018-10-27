@@ -78,7 +78,7 @@ export function createPostTile(post, api) {
  * @param {*} api 
  */
 export function viewUserProfile(username, nameElement, api) {
-    nameElement.addEventListener('click', () => {
+    nameElement.addEventListener('click', (event) => {
         const userToken = checkStore('user');
         document.getElementsByClassName('modal')[0].style.display = 'none';
         document.getElementsByClassName('modal')[1].style.display = 'none';

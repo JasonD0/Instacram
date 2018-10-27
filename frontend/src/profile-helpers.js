@@ -24,7 +24,7 @@ export function initProfile(userId, api) {
             if (userId == parseInt(checkStore('id')) || !userId) {
                 const edit = createElement('a');
                 edit.innerText = 'Edit Profile';
-                edit.addEventListener('click', () => {
+                edit.addEventListener('click', (event) => {
                     const modal = document.getElementsByClassName('modal')[2];
                     modal.style.display = 'block';
                 });
@@ -81,7 +81,7 @@ function addUploadImage(profileForm, api) {
     
     const imageInput = createElement('input');
     imageInput.type = 'file';
-    imageInput.addEventListener('change', () => uploadImage(event, api));
+    imageInput.addEventListener('change', (event) => uploadImage(event, api));
 
     uploader.appendChild(imageInput);
     appendChilds(profileForm, [createElement('br'), createElement('br'), uploadLabel, description, uploader]);
@@ -104,7 +104,7 @@ export function initEditProfile(api) {
     // done 'button' to update new user information
     const done = createElement('a');
     done.innerText = 'Done';
-    done.addEventListener('click', () => {
+    done.addEventListener('click', (event) => {
         const inputs = document.getElementsByClassName('input-text-boxes1');
         updateUserInfo(inputs, api);
         for (var box of inputs) box.value = '';

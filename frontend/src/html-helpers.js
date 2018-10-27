@@ -117,7 +117,7 @@ export function createModal(type) {
     
     const exit = createElement('a', null, {class: 'exit'});
     exit.innerText = '×';
-    exit.addEventListener('click', () => {
+    exit.addEventListener('click', (event) => {
         Array.from(document.getElementsByClassName('modal')).map(m => m.style.display = 'none');
         document.getElementById('large-feed').style.float = 'none';
     });

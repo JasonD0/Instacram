@@ -163,13 +163,6 @@ a:hover {
     font-size: 15px;
 }
 
-.date {
-    font-size: 15px;
-    padding-left: 10px;
-    color: rgba(255, 255, 255, 0.5);
-    float: left;
-}
-
 .modal {
     display: none;
     position: fixed;
@@ -219,11 +212,21 @@ a:hover {
     font-size: 12px;
     float: left;
     padding: 3px 0px 0px 10px;
+    clear: both;
 }
 
 .user {
+    clear: both;
     padding: 10px 0px 0px 0px;
     color: white;
+    float: left;
+}
+
+.date {
+    clear: both;
+    font-size: 15px;
+    padding-left: 10px;
+    color: rgba(255, 255, 255, 0.5);
     float: left;
 }
 
