@@ -237,7 +237,7 @@ a:hover {
     overflow-wrap: break-word;
 }
 
-#error {
+.error {
     font-size: 15px;
     color: aquamarine;
     text-align: center;

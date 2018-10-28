@@ -1,5 +1,5 @@
 // change this when you integrate with the real API, or when u start using the dev server
-const API_URL = 'http://localhost:5000'
+const API_URL = 'http://localhost:2138'
 
 const getJSON = (path, options) => 
     fetch(path, options)

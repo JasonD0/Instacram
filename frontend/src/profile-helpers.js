@@ -24,7 +24,7 @@ export function initProfile(userId, api) {
             if (userId == parseInt(checkStore('id')) || !userId) {
                 const edit = createElement('a');
                 edit.innerText = 'Edit Profile';
-                edit.addEventListener('click', (event) => {
+                edit.addEventListener('click', () => {
                     const modal = document.getElementsByClassName('modal')[2];
                     modal.style.display = 'block';
                 });
@@ -40,6 +40,8 @@ export function initProfile(userId, api) {
  * @param {*} info 
  */
 function appendProfileInformation(profile, info, userToken, userId, api) {
+    const userPosts = document.getElementById('userPosts');
+    const profileForm = document.getElementById('profileForm');
     addLabelAndText(profile, 'Username: ', info.username, 'author');
     addLabelAndText(profile, 'Name: ', info.name, 'user-name');
     addLabelAndText(profile, 'Email: ', info.email, 'user-email');
@@ -104,7 +106,7 @@ export function initEditProfile(api) {
     // done 'button' to update new user information
     const done = createElement('a');
     done.innerText = 'Done';
-    done.addEventListener('click', (event) => {
+    done.addEventListener('click', () => {
         const inputs = document.getElementsByClassName('input-text-boxes1');
         updateUserInfo(inputs, api);
         for (var box of inputs) box.value = '';

@@ -26,7 +26,7 @@ userPosts.style.display = 'none';
 // navigation item for login/logout
 const login = document.getElementById('login');
 login.innerText = 'LOGIN';
-login.addEventListener('click', (event)=>{
+login.addEventListener('click', ()=>{
     if (login.innerText === 'LOGIN') {
         formChange('registerForm', 'loginForm');
     } else {
@@ -49,7 +49,7 @@ login.addEventListener('click', (event)=>{
 // navigation item for register/feed/profile
 const register = document.getElementById('register');
 register.innerText = 'REGISTER';
-register.addEventListener('click', (event)=>{
+register.addEventListener('click', ()=>{
     // change page to register
     if (register.innerText === 'REGISTER') {
         formChange('loginForm', 'registerForm');
@@ -76,43 +76,47 @@ register.addEventListener('click', (event)=>{
 
 // follow button to follow user searched in search bar
 const followButton = document.getElementById('follow');
-followButton.addEventListener('click', (event) => {
+followButton.addEventListener('click', () => {
     const user = document.getElementById('follow-input');
     const userToken = checkStore('user');
     api.makeAPIRequest('user/follow?username='+user.value, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'PUT'))
         .then(data => {
-            if (data.message === 'User Not Found') {
+            if (data.message !== 'success') {
                 user.value = data.message;
+            // update page if follow successful
             } else if (data.message === 'success') {
                 const userName = document.getElementById('author').innerText;
                 const following = document.getElementById('following');
                 if (following && userName === checkStore('author')) following.innerText += user.value + ',\u00A0';
                 user.value = '';
+                loadFeed(api, feed, null);
             }
         });
 });
 
 // unfollow button to unfollow user searched in search bar
 const unfollowButton = document.getElementById('un-follow');
-unfollowButton.addEventListener('click', (event) => {
+unfollowButton.addEventListener('click', () => {
     const user = document.getElementById('follow-input');
     const userToken = checkStore('user');
     api.makeAPIRequest('user/unfollow?username='+user.value, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}` }, 'PUT'))
         .then(data => {
-            if (data.message === 'User Not Found') {
+            if (data.message !== 'success') {
                 user.value = data.message;
+            // update page if unfollow successful
             } else if (data.message === 'success') {
                 const userName = document.getElementById('author').innerText;
                 const following = document.getElementById('following');
                 if (following && userName === checkStore('author')) following.innerText = following.innerText.replace(user.value + ',\u00A0', '');
                 user.value = '';
+                loadFeed(api, feed, true);
             }
         });
 });
 
 // login button
 const submitL = createButton('Login', 'submit');
-submitL.addEventListener('click', (event) => {
+submitL.addEventListener('click', () => {
     const tb = document.getElementsByClassName('input-text-boxes');
     // request login  get token
     api.makeAPIRequest('auth/login', options({ 'Content-Type': 'application/json' }, 'POST', {username: tb[0].value, password: tb[1].value}))
@@ -123,15 +127,14 @@ submitL.addEventListener('click', (event) => {
                 error.style.display = 'block';
             // go to home page
             } else {
-                homePage(data, api);
-                error.style.display = 'none';
+                homePage(data, api, feed);
             }
         });
     });
 
 // signup button
 const submitR = createButton('Signup', 'submit');
-submitR.addEventListener('click', (event) => {
+submitR.addEventListener('click', () => {
     const tb = Array.from(document.getElementsByClassName('input-text-boxes')).slice(2, 6);
     // request signup  get token
     api.makeAPIRequest('auth/signup', options({ 'Content-Type': 'application/json' }, 'POST', {username:  tb[2].value, password: tb[3].value, email: tb[1].value, name: tb[0].value})) 
@@ -142,17 +145,16 @@ submitR.addEventListener('click', (event) => {
                 error1.style.display = 'block';
             // go to home page
             } else {
-                homePage(data, api);
-                error1.style.display = 'none';
+                homePage(data, api, feed);
             }
         });
     });
 
 window.localStorage.setItem('currentScrollHeight', 0);
 // adds infinite scroll to window
-window.addEventListener('scroll', (event) => {
+window.addEventListener('scroll', () => {
     const windowHeight = document.body.scrollHeight;
-    let x = (checkStore('scrollY')) ? parseInt(checkStore('currentScrollHeight')) : 0;
+    let x = (checkStore('currentScrollHeight')) ? parseInt(checkStore('currentScrollHeight')) : 0;
     const currentHeight = window.scrollY - x;
     const currPage = document.getElementById('register');
     const userToken = checkStore('user');
@@ -160,13 +162,14 @@ window.addEventListener('scroll', (event) => {
     const n = 5;
     const feed = document.getElementById('feed');
     
+    // appends posts when user scrolled past fixed percentage
     if (currentHeight/windowHeight > 0.4) {
         window.localStorage.setItem('currentScrollHeight', currentHeight);
         // add posts to feed         
         if (currPage.innerText === 'PROFILE') {
             api.makeAPIRequest('user/feed?p='+p+'&n='+n, optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
             .then(data => {
-                if (data.posts.length > 0) appendPosts(feed, data.posts, api);
+                if (data && data.posts.length > 0) appendPosts(feed, data.posts, api);
             });
             window.localStorage.setItem('feedPosts', p+n);
             
@@ -194,8 +197,8 @@ const passLabel = createLabel('Password:', 'h2');
 const passLabel1 = createLabel('Password:', 'h2');
 const nameLabel = createLabel('Name:', 'h2');
 const emailLabel = createLabel('Email:', 'h2');
-const error = createElement('i', null, {id: 'error'});
-const error1 = createElement('i', null, {id: 'error'});
+const error = createElement('i', null, {class: 'error'});
+const error1 = createElement('i', null, {class: 'error'});
 
 // adds pages to html
 appendChilds(loginForm, [header('LOGIN'), error, createElement('br'), userLabel1, username.cloneNode(), passLabel1, password.cloneNode(), createElement('br'), createElement('br'), createElement('br'), submitL]);
@@ -204,6 +207,8 @@ appendChilds(body, [createModal('COMMENTS'), createModal('LIKED BY'), createModa
 
 // reload feed page when user refreshes
 if (checkStore('user')) {
+    window.scrollTo(0,0);
+    window.localStorage.setItem('currentScrollHeight', 0);
     userSearchDisplay('inline-block');
     
     // change navigation text and change page to previous page before reload
@@ -215,7 +220,7 @@ if (checkStore('user')) {
         register.innerText = 'PROFILE';
     }
     formChange('loginForm', checkStore('currentPage'));
-    loadFeed(api);
+    loadFeed(api, feed, true);
     initEditProfile(api);
 } else {
     window.localStorage.setItem('currentPage', 'loginForm');
@@ -239,7 +244,9 @@ export function addUserPosts(postIds, userToken) {
                 s.unshift(postInfo);
                 // when finished getting all post info  adds posts to user posts html
                 if (s.length == postIds.length) {
-                    userPostsList = s;
+                    userPostsList = s.sort((a, b) => {
+                        return parseFloat(b.meta.published) - parseFloat(a.meta.published);
+                    });
                     window.localStorage.setItem('userPosts', (s.length < 10) ? s.length : 10);
                     appendPosts(up, s.slice(0, parseInt(checkStore('userPosts'))), api);
                     document.getElementById('total-likes').innerText = totalLikes;

@@ -1,4 +1,4 @@
-import { appendChilds } from './html-helpers.js';
+import { appendChilds, removeChilds } from './html-helpers.js';
 import { addViewComments, addLikes, addViewLikes } from './modal-helpers.js';
 import { initProfile, initEditProfile } from './profile-helpers.js';
 
@@ -46,12 +46,12 @@ export function createPostTile(post, api) {
         { src: 'data:image/png;base64,' + post.src, alt: post.meta.description_text, class: 'post-image' }));
 
     const name = createElement('a');
-    name.innerText = post.meta.author + "\n";
+    name.innerText = post.meta.author + '\n';
     name.className = 'name';
     viewUserProfile(post.meta.author, name, api);
     
     const description = createElement('p');
-    description.innerText = '\"' + post.meta.description_text + '\"';
+    description.innerText = '"' + post.meta.description_text + '"';
     description.style.textAlign = 'center';
     
     const numComments = (post.comments) ? post.comments.length : 0;
@@ -65,6 +65,10 @@ export function createPostTile(post, api) {
     const date = createElement('i');
     date.className = 'date';
     date.innerText = convertToTime(post.meta.published);
+    
+    const del = createElement('a');
+    del.className = 'del';
+    del.innerText= 'Delete Post';
 
     appendChilds(section, [name, likes, viewLikes, description, comments, date]);
 
@@ -72,18 +76,20 @@ export function createPostTile(post, api) {
 }
 
 /**
- * Clicking on a username  transports user to the profile page
+ * Clicking on a username  chnages current page to the profile page
  * @param {*} username 
  * @param {*} nameElement 
  * @param {*} api 
  */
 export function viewUserProfile(username, nameElement, api) {
-    nameElement.addEventListener('click', (event) => {
+    const register = document.getElementById('register');
+    nameElement.addEventListener('click', () => {
         const userToken = checkStore('user');
         document.getElementsByClassName('modal')[0].style.display = 'none';
         document.getElementsByClassName('modal')[1].style.display = 'none';
         api.makeAPIRequest('user/?username='+username, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
             .then(userInfo => {
+                // show profile page
                 register.innerText = 'FEED';
                 window.localStorage.setItem('profile', userInfo.id);
                 initProfile(userInfo.id, api);
@@ -124,6 +130,7 @@ export function uploadImage(event, api) {
                 const id = postId.post_id;
                 api.makeAPIRequest('post/?id='+id, optionsNoBody({'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
                     .then(imageInfo => {
+                        // update page if post successful
                         document.getElementById('description').value = '';
                         const totalPostsCounter = document.getElementById('total-posts');
                         let x = parseInt(totalPostsCounter.innerText.replace(/\D+/g, ''));
@@ -211,8 +218,11 @@ export function formChange(pageA, pageB) {
  * Changes page to home page
  * @param {*} data 
  */
-export function homePage(data, api) {
+export function homePage(data, api, feed) {
     if (data.token) {
+        const register = document.getElementById('register');
+        const login = document.getElementById('login');
+        Array.from(document.getElementsByClassName('error')).map(element => element.style.display = 'none');
         window.localStorage.setItem('changesToFeedContent', 0);
 
         userSearchDisplay('inline-block');
@@ -233,7 +243,7 @@ export function homePage(data, api) {
             })
             // load feed and profile
             .then(() => {
-                loadFeed(api);
+                loadFeed(api, feed, true);
                 initEditProfile(api);
             });
     }
@@ -242,7 +252,8 @@ export function homePage(data, api) {
 /**
  * Loads user feed
  */
-export function loadFeed(api) {
+export function loadFeed(api, feed, loadProfile) {
+    removeChilds(feed);
     window.localStorage.setItem('changesToFeedContent', 0);
     const userToken = checkStore('user');
     api.makeAPIRequest('user/feed', optionsNoBody({ 'Content-Type': 'application/json', Authorization: `Token ${userToken}`}, 'GET'))
@@ -250,7 +261,9 @@ export function loadFeed(api) {
         if (data.posts) window.localStorage.setItem('feedPosts', data.posts.length);
         appendPosts(feed, data.posts, api);
     })
-    .then(() => initProfile(null, api));
+    .then(() => {
+        if (loadProfile) initProfile(null, api);
+    });
 }
 
 /**
