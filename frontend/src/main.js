@@ -89,6 +89,7 @@ followButton.addEventListener('click', () => {
                 const following = document.getElementById('following');
                 if (following && userName === checkStore('author')) following.innerText += user.value + ',\u00A0';
                 user.value = '';
+                window.localStorage.setItem('currentScrollHeight', 0);
                 loadFeed(api, feed, null);
             }
         });
@@ -109,7 +110,8 @@ unfollowButton.addEventListener('click', () => {
                 const following = document.getElementById('following');
                 if (following && userName === checkStore('author')) following.innerText = following.innerText.replace(user.value + ',\u00A0', '');
                 user.value = '';
-                loadFeed(api, feed, true);
+                window.localStorage.setItem('currentScrollHeight', 0);
+                loadFeed(api, feed, null);
             }
         });
 });
